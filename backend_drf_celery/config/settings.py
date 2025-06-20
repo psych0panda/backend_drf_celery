@@ -21,7 +21,8 @@ INSTALLED_APPS = [
     # Third-party
     "rest_framework",
     # Project apps
-    "video.apps.VideoConfig",  # our sample app
+    "video.apps.VideoConfig",
+    "prompts.apps.PromptsConfig",
 ]
 
 MIDDLEWARE = [

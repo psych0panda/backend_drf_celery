@@ -86,3 +86,43 @@ curl http://localhost:8000/api/tasks/<uuid>/
 ## Conclusion
 
 Breaking down the pipeline into `chain/group/chord` gives fault tolerance, scalability, and easy monitoring, while keeping the external API (views) unchanged—which aligns with the principles of *clean architecture*: the UI layer is not dependent on the details of orchestration deep down. 
+
+## Prompt storage (new `prompts` app)
+
+Модели:
+
+| Model | Цель |
+|-------|------|
+| `Prompt` | текущая активная версия системных / шаблонных prompt'ов (type, text, parameters, tags) |
+| `PromptVersion` | неизменяемые слепки текста для аудита и откатов (FK→Prompt, version, author) |
+| `UserPrompt` | сырые пользовательские запросы, для аналитики и retraining |
+
+Поле `parameters` хранит JSON c настройками LLM (model, temperature…).
+
+Для полнотекстового/семантического поиска можно добавить pgvector-таблицу `PromptEmbedding`, если переключитесь на Postgres. 
+
+## New models in prompts app
+
+1. `Prompt`  
+   • type (system/template/tool/user)  
+   • text, parameters (JSON), tags (JSON-array)  
+   • active `version`, creation/update dates.
+
+2. `PromptVersion`  
+   • FK → Prompt, version number, text, parameters, author  
+   • immutable snapshot; unique pair `(prompt, version)`.
+
+3. `UserPrompt`  
+   • FK → User, original user text, language, arbitrary metadata  
+   • suitable for analytics and retraining.
+
+All models are already entered in `prompts/models.py`, and `prompts.apps.PromptsConfig` added to `INSTALLED_APPS`.  
+
+To apply in the database:
+
+```bash
+docker compose run --rm web python manage.py makemigrations prompts
+docker compose run --rm web python manage.py migrate
+```
+
+If later decide to switch to Postgres + pgvector, can add `PromptEmbedding` model with `VectorField`. 
